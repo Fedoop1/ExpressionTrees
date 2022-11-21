@@ -28,21 +28,25 @@ namespace ExpressionTrees.Task1.ExpressionsTransformer
                 [nameof(NumStorage.Num3)] = 9,
             };
 
-            IEnumerable<Expression> expressions;
+            IEnumerable<Expression> expressions = default;
 
             var incDecExpressionVisitor = new IncDecExpressionVisitor<NumStorage>(numStorage, propDictionary);
+
+            PrintObject(numStorage);
 
             Console.WriteLine("Increment first num, decrement second field, increment third field");
 
             expressions = incDecExpressionVisitor.Transform(s => s.Num1 + 1, s => s.Num2 - 1, s => s.Num3 + 1);
 
             PrintExpression(expressions);
+            PrintObject(numStorage);
 
-            Console.WriteLine("Update initial object. New values: Num1 = 9, Num3 = 9");
+            Console.WriteLine("Update initial object. New values: Num1 = 9, Num2 = 9, Num3 = 9");
 
             expressions = incDecExpressionVisitor.Transform(s => s.Num1, s => s.Num3);
 
             PrintExpression(expressions);
+            PrintObject(numStorage);
 
             Console.ReadLine();
         }
@@ -54,6 +58,8 @@ namespace ExpressionTrees.Task1.ExpressionsTransformer
                 Console.WriteLine(expression);
             }
         }
+
+        private static void PrintObject<TEntity>(TEntity entity) => Console.WriteLine($"Current value: {entity}");
     }
 
     public record NumStorage(int Num1, int Num2, int Num3);

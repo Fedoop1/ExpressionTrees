@@ -18,28 +18,37 @@ namespace ExpressionTrees.Task1.ExpressionsTransformer
 
         public IEnumerable<Expression> Transform(params Expression<Func<TEntity, object>>[] expressions)
         {
-            return expressions.Select(expression => Visit(expression));
+            return expressions.Select(Visit);
         }
 
         protected override Expression VisitBinary(BinaryExpression node)
         {
-            if (node.Left is not MemberExpression memberExpression || node.Right is not ConstantExpression) return base.VisitBinary(node);
+            if (node.Left is not MemberExpression memberExpression || node.Right is not ConstantExpression ||
+                node.NodeType is not ExpressionType.Add and ExpressionType.Decrement) return base.VisitBinary(node);
 
-            switch (node.NodeType)
-            {
-                case ExpressionType.Add:
-                    return Expression.Increment(memberExpression);
-                case ExpressionType.Subtract:
-                    return Expression.Decrement(memberExpression);
-                default: throw new NotSupportedException($"Operation {node.NodeType} doesn't supported");
-            }
+            var targetParameter = Expression.Parameter(typeof(TEntity), "target");
+            var targetProp = Expression.PropertyOrField(targetParameter, memberExpression.Member.Name);
+
+            var expression = node.NodeType == ExpressionType.Add
+                ? Expression.PostIncrementAssign(targetProp)
+                : Expression.PostDecrementAssign(targetProp);
+
+            Expression.Lambda<Action<TEntity>>(expression, false, targetParameter).Compile()(target);
+
+            return expression;
         }
 
         protected override Expression VisitMember(MemberExpression node)
         {
             if (!this.properties.TryGetValue(node.Member.Name, out var newValue)) return base.VisitMember(node);
 
-            return Expression.Assign(node, Expression.Constant(newValue));
+            var targetParameter = Expression.Parameter(typeof(TEntity), "target");
+            var targetProp = Expression.PropertyOrField(targetParameter, node.Member.Name);
+            var expression = Expression.Assign(targetProp, Expression.Constant(newValue));
+
+            Expression.Lambda<Action<TEntity>>(expression, false, targetParameter).Compile()(target);
+
+            return expression;
         }
     }
 }
